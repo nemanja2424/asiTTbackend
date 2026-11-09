@@ -12,7 +12,7 @@ from psycopg.rows import dict_row
 from ..authorization import transaction_actor
 from ..db import run_transaction
 from ..errors import APIError
-from ..repositories import resources as repo
+from ..repositories import resources as repo, tasks as task_repo
 from ..repositories import scope as scope_repo
 from . import departments, projects, scope
 
@@ -256,6 +256,12 @@ def permanent(kind, owner_id, item_kind, item_id):
             raise APIError('not_found', 'Deleted item not found', 404)
         ids = _descendants(folders, item_id) if item_kind == 'folder' else set()
         entries = [f for f in files.values() if f['folder_id'] in ids or (item_kind == 'file' and f['id'] == item_id)]
+        file_ids = [f['id'] for f in entries]
+        if file_ids:
+            links = connection.execute('''SELECT a.task_id,f.original_name FROM task_attachments a
+                JOIN resource_files f ON f.id=a.resource_id WHERE f.id=ANY(%s::uuid[])''', (file_ids,)).fetchall()
+            for link in links:
+                task_repo.activity(connection, link['task_id'], actor['id'], 'attachment_removed', old=link['original_name'])
         repo.delete(connection, 'resource_files', [f['id'] for f in entries])
         # Children must be removed before parents due to the restrictive FK.
         for folder_id in sorted(ids, key=lambda x: len(_path(folders, x)), reverse=True):

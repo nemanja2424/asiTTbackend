@@ -21,6 +21,8 @@ from backend.routes.dashboard import blueprint as dashboard_blueprint
 from backend.routes.profile_image import blueprint as profile_image_blueprint
 from backend.routes.resources import blueprint as resources_blueprint, ResourceRequest
 from backend.routes.ai import blueprint as ai_blueprint
+from backend.routes.tasks import blueprint as tasks_blueprint
+from backend.routes.notifications import blueprint as notifications_blueprint
 
 
 class APIJSONProvider(DefaultJSONProvider):
@@ -50,6 +52,8 @@ def create_app():
     app.register_blueprint(profile_image_blueprint)
     app.register_blueprint(resources_blueprint)
     app.register_blueprint(ai_blueprint)
+    app.register_blueprint(tasks_blueprint)
+    app.register_blueprint(notifications_blueprint)
     return app
 
 
