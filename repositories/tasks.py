@@ -1,12 +1,15 @@
 """Parameterized task queries; permissions are provided by the service."""
+from .projects import EFFECTIVE_CTE
+
 FIELDS = '''t.*, p.name AS project_name, p.status AS project_status, p.archived_at AS project_archived_at,
             a.full_name AS assigned_name, c.full_name AS creator_name'''
 JOIN = '''FROM tasks t JOIN projects p ON p.id=t.project_id
           JOIN users c ON c.id=t.created_by LEFT JOIN users a ON a.id=t.assigned_to'''
 
 
-def find(connection, task_id):
-    return connection.execute(f'SELECT {FIELDS} {JOIN} WHERE t.id=%s', (task_id,)).fetchone()
+def find(connection, task_id, lock=False):
+    lock_clause = ' FOR KEY SHARE OF t' if lock else ''
+    return connection.execute(f'SELECT {FIELDS} {JOIN} WHERE t.id=%s{lock_clause}', (task_id,)).fetchone()
 
 
 def listing(connection, visible, own, filters, after, limit):
@@ -14,6 +17,14 @@ def listing(connection, visible, own, filters, after, limit):
     params = [list(visible), own, own]
     if after:
         clauses.append('t.id > %s'); params.append(after)
+    if 'task_id' in filters:
+        clauses.append('t.id=%s'); params.append(filters['task_id'])
+    if 'q' in filters:
+        clauses.append('position(lower(%s) in lower(t.title)) > 0'); params.append(filters['q'])
+    if filters.get('work_loggable'):
+        clauses.append("p.status='active' AND p.archived_at IS NULL")
+        clauses.append('EXISTS (SELECT 1 FROM effective_participants e WHERE e.project_id=t.project_id AND e.user_id=%s)')
+        params.append(filters['work_loggable_actor'])
     for key in ('project_id', 'assigned_to', 'status', 'priority'):
         if key in filters:
             clauses.append(f't.{key}=%s'); params.append(filters[key])
@@ -21,7 +32,8 @@ def listing(connection, visible, own, filters, after, limit):
         if key in filters:
             clauses.append(f't.due_date {operator} %s'); params.append(filters[key])
     params.append(limit + 1)
-    return connection.execute(f'SELECT {FIELDS} {JOIN} WHERE {" AND ".join(clauses)} ORDER BY t.id LIMIT %s', params).fetchall()
+    prefix = EFFECTIVE_CTE if filters.get('work_loggable') else ''
+    return connection.execute(prefix + f'SELECT {FIELDS} {JOIN} WHERE {" AND ".join(clauses)} ORDER BY t.id LIMIT %s', params).fetchall()
 
 
 def create(connection, data, actor_id):

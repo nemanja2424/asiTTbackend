@@ -18,8 +18,8 @@ def assignment(connection, project_id, user_id):
         raise APIError('invalid_assignments', 'Assignee must be an active project participant')
 
 
-def task_access(connection, actor, task_id, write=False):
-    row = repository.find(connection, task_id)
+def task_access(connection, actor, task_id, write=False, lock=False):
+    row = repository.find(connection, task_id, lock=lock)
     visible, manageable = projects.permissions(connection, actor)
     if row is None or (row['project_id'] not in visible and not (actor['role']=='worker' and row['assigned_to']==actor['id'])):
         raise APIError('not_found', 'Task not found', 404)
@@ -48,6 +48,8 @@ def listing(filters, args):
             if 'assigned_to' in effective and effective['assigned_to'] != actor['id']:
                 raise APIError('invalid_input', 'mine conflicts with assigned_to')
             effective['assigned_to'] = actor['id']
+        if effective.get('work_loggable'):
+            effective['work_loggable_actor'] = actor['id']
         binding = {**effective, 'endpoint':'tasks', 'actor':str(actor['id']), 'role':actor['role']}
         limit, after = page_request(args, binding)
         if after is not None: after = uuid4(after, 'cursor position')

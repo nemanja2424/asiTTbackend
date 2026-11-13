@@ -26,13 +26,18 @@ def validated(data):
 @authenticated()
 def listing():
     filters = {}
-    for key in ('project_id','assigned_to'):
+    for key in ('project_id','assigned_to','task_id'):
         if key in request.args: filters[key] = uuid4(request.args[key], key)
+    if 'q' in request.args:
+        query = text(request.args['q'], 'q', minimum=0, maximum=255)
+        if query: filters['q'] = query
     for key in ('status','priority'):
         if key in request.args: filters[key] = request.args[key]
     for key in ('due_from','due_to'):
         if key in request.args: filters[key] = iso_date(request.args[key], key)
     if 'mine' in request.args: filters['mine'] = query_boolean(request.args['mine'], 'mine')
+    if 'work_loggable' in request.args:
+        filters['work_loggable'] = query_boolean(request.args['work_loggable'], 'work_loggable')
     if 'due_from' in filters and 'due_to' in filters and filters['due_from'] > filters['due_to']:
         raise APIError('invalid_input', 'Date filter range is reversed')
     return jsonify(service.listing(validated(filters), request.args))

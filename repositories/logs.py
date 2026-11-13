@@ -1,8 +1,8 @@
 def create(connection, user_id, data):
     return connection.execute('''
-        INSERT INTO logs(user_id,project_id,start_time,end_time,spent_time,note)
-        VALUES (%s,%s,%s,%s,%s,%s) RETURNING *
-    ''', (user_id,data['project_id'],data['start_time'],data['end_time'],data['spent_time'],data.get('note'))).fetchone()
+        INSERT INTO logs(user_id,project_id,task_id,start_time,end_time,spent_time,note)
+        VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *
+    ''', (user_id,data['project_id'],data.get('task_id'),data['start_time'],data['end_time'],data['spent_time'],data.get('note'))).fetchone()
 
 
 def find(connection, log_id, visible_users):

@@ -10,7 +10,7 @@ from ..pagination import page_request, page_response
 from ..repositories import logs as repository
 from ..repositories import projects as project_repository
 from ..validation import uuid4
-from . import scope
+from . import scope, tasks
 
 
 def date_bounds(filters):
@@ -50,6 +50,10 @@ def create(data):
             raise APIError('project_unavailable','Project must be active and not archived',409)
         if not project_repository.is_effective_participant(connection,data['project_id'],actor['id']):
             raise APIError('forbidden','You are not a participant of this project',403)
+        if data.get('task_id') is not None:
+            task, _, _ = tasks.task_access(connection, actor, data['task_id'], lock=True)
+            if task['project_id'] != data['project_id']:
+                raise APIError('invalid_input', 'Task does not belong to the selected project')
         return repository.create(connection,actor['id'],data)
     return run_transaction(operation)
 

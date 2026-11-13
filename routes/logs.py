@@ -13,9 +13,11 @@ BIGINT_MAX = 9223372036854775807
 @blueprint.post('')
 @authenticated()
 def create():
-    data = json_body({'project_id','start_time','end_time','spent_time','note'},
+    data = json_body({'project_id','task_id','start_time','end_time','spent_time','note'},
                      {'project_id','start_time','end_time','spent_time'})
     data['project_id'] = uuid4(data['project_id'],'project_id')
+    if data.get('task_id') is not None:
+        data['task_id'] = uuid4(data['task_id'], 'task_id')
     data['start_time'] = timestamp(data['start_time'],'start_time')
     data['end_time'] = timestamp(data['end_time'],'end_time')
     data['spent_time'] = integer(data['spent_time'],'spent_time',maximum=BIGINT_MAX)
