@@ -23,6 +23,7 @@ from backend.routes.resources import blueprint as resources_blueprint, ResourceR
 from backend.routes.ai import blueprint as ai_blueprint
 from backend.routes.tasks import blueprint as tasks_blueprint
 from backend.routes.notifications import blueprint as notifications_blueprint
+from backend.routes.system import blueprint as system_blueprint
 
 
 class APIJSONProvider(DefaultJSONProvider):
@@ -54,6 +55,7 @@ def create_app():
     app.register_blueprint(ai_blueprint)
     app.register_blueprint(tasks_blueprint)
     app.register_blueprint(notifications_blueprint)
+    app.register_blueprint(system_blueprint)
     return app
 
 
